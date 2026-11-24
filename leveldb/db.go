@@ -583,8 +583,11 @@ func (db *DB) recoverJournal() error {
 					return errors.SetFd(err, fd)
 				}
 
-				// Save sequence number.
-				db.seq = batchSeq + uint64(batchLen)
+				// Save sequence number, keeping the highest one seen: a batch
+				// below the MANIFEST sequence must not move it backwards.
+				if next := batchSeq + uint64(batchLen); next > db.seq {
+					db.seq = next
+				}
 
 				// Flush it if large enough.
 				if mdb.Size() >= writeBuffer {
@@ -719,8 +722,11 @@ func (db *DB) recoverJournalRO() error {
 					return errors.SetFd(err, fd)
 				}
 
-				// Save sequence number.
-				db.seq = batchSeq + uint64(batchLen)
+				// Save sequence number, keeping the highest one seen: a batch
+				// below the MANIFEST sequence must not move it backwards.
+				if next := batchSeq + uint64(batchLen); next > db.seq {
+					db.seq = next
+				}
 			}
 
 			fr.Close()

@@ -285,9 +285,12 @@ func decodeBatchToMem(data []byte, expectSeq uint64, mdb *memdb.DB) (seq uint64,
 	if err != nil {
 		return 0, 0, err
 	}
-	if seq < expectSeq {
-		return 0, 0, newErrBatchCorrupted("invalid sequence number")
-	}
+	// Chromium's C++ LevelDB records the current sequence in the MANIFEST on
+	// every compaction, including writes that only exist in the active
+	// journal, and its recovery (DBImpl::RecoverLogFile) never rejects a
+	// batch below that sequence. Rejecting it here silently drops those
+	// writes, so expectSeq is no longer used to discard batches.
+	_ = expectSeq
 	data = data[batchHeaderLen:]
 	var ik []byte
 	var decodedLen int
